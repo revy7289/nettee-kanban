@@ -1,9 +1,1 @@
 blank_issues_enabled: false
-contact_links:
-  - name: 버그 이슈 템플릿
-
-    url: https://github.com/nettee-space/nettee-kanban/issues/new?template=bug_report.md
-    about: 발생된 버그에 관한 이슈 템플릿입니다.
-  - name: 버그 이슈 템플릿
-    url: https://github.com/nettee-space/nettee-kanban/issues/new?template=feature_request.md
-    about: 발생된 버그에 관한 이슈 템플릿입니다.
