@@ -5,6 +5,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: 'http://revy7289.github.io/nettee-kanban',
   plugins: [
     react(),
     tailwindcss(), // Tailwind CSS 설정 적용
