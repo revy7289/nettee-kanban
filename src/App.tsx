@@ -260,7 +260,7 @@ export function App() {
               <button type="button">▼</button>
             </div>
 
-            <div className="flex gap-[8px]">
+            <div className="flex flex-wrap gap-[8px]">
               <div className="max-h-[860px] min-h-[152px] flex-1 bg-[#FFFBDE] px-[20px] py-[16px]">
                 <div className="flex items-center justify-between">
                   <div className="flex gap-[8px]">
