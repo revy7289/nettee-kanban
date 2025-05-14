@@ -71,18 +71,14 @@ export function App() {
             className={`overflow-hidden pt-[10px] ${isSidebarItemOpen.project ? 'h-full' : 'h-0'}`}
           >
             {projectList.map((proj) => (
-              <li
-                key={`${proj}_project`}
-                className="flex items-center gap-[8px] px-[8px] py-[6px]"
-              >
-                <label className="flex h-[24px] w-[24px] items-center justify-center">
+              <li key={`${proj}_project`} className="px-[8px] py-[6px]">
+                <label className="flex items-center gap-[8px]">
                   <input
                     type="checkbox"
                     className="h-[18px] w-[18px] rounded-[4px]"
                   />
+                  {proj}
                 </label>
-
-                {proj}
               </li>
             ))}
           </ul>
@@ -108,18 +104,14 @@ export function App() {
             className={`overflow-hidden pt-[10px] ${isSidebarItemOpen.team ? 'h-full' : 'h-0'}`}
           >
             {teamList.map((team) => (
-              <li
-                key={`${team}_team`}
-                className="flex items-center gap-[8px] px-[8px] py-[6px]"
-              >
-                <label className="flex h-[24px] w-[24px] items-center justify-center">
+              <li key={`${team}_team`} className="px-[8px] py-[6px]">
+                <label className="flex items-center gap-[8px]">
                   <input
                     type="checkbox"
                     className="h-[18px] w-[18px] rounded-[4px]"
                   />
+                  {team}
                 </label>
-
-                {team}
               </li>
             ))}
           </ul>
@@ -161,18 +153,17 @@ export function App() {
               {teamMembers.map((member, idx) => (
                 <li
                   key={`${idx + member}_assignee`}
-                  className="flex items-center gap-[8px] px-[8px] py-[6px]"
+                  className="px-[8px] py-[6px]"
                 >
-                  <label className="flex h-[24px] w-[24px] items-center justify-center">
+                  <label className="flex items-center gap-[8px]">
                     <input
                       type="checkbox"
                       className="h-[18px] w-[18px] rounded-[4px]"
                     />
+
+                    <div className="h-[20px] w-[20px] rounded-full bg-[#dbdbdb]"></div>
+                    {member}
                   </label>
-
-                  <div className="h-[20px] w-[20px] rounded-full bg-[#dbdbdb]"></div>
-
-                  {member}
                 </li>
               ))}
             </ul>
@@ -261,7 +252,7 @@ export function App() {
             </div>
 
             <div className="flex flex-wrap gap-[8px]">
-              <div className="max-h-[860px] min-h-[152px] flex-1 bg-[#FFFBDE] px-[20px] py-[16px]">
+              <div className="flex max-h-[860px] min-h-[152px] flex-1 flex-col bg-[#FFFBDE] px-[20px] py-[16px]">
                 <div className="flex items-center justify-between">
                   <div className="flex gap-[8px]">
                     <p>TO DO</p>
@@ -271,8 +262,13 @@ export function App() {
                     +
                   </div>
                 </div>
+
+                <div className="flex flex-1 items-center justify-center pb-[8px]">
+                  일정이 없습니다.
+                </div>
               </div>
-              <div className="max-h-[860px] min-h-[152px] flex-1 bg-[#E7F3FE] px-[20px] py-[16px]">
+
+              <div className="flex max-h-[860px] min-h-[152px] flex-1 flex-col bg-[#E7F3FE] px-[20px] py-[16px]">
                 <div className="flex items-center justify-between">
                   <div className="flex gap-[8px]">
                     <p>DOING</p>
@@ -282,8 +278,13 @@ export function App() {
                     +
                   </div>
                 </div>
+
+                <div className="flex flex-1 items-center justify-center pb-[8px]">
+                  일정이 없습니다.
+                </div>
               </div>
-              <div className="max-h-[860px] min-h-[152px] flex-1 bg-[#EEFBE6] px-[20px] py-[16px]">
+
+              <div className="flex max-h-[860px] min-h-[152px] flex-1 flex-col bg-[#EEFBE6] px-[20px] py-[16px]">
                 <div className="flex items-center justify-between">
                   <div className="flex gap-[8px]">
                     <p>DONE</p>
@@ -297,6 +298,10 @@ export function App() {
                       +
                     </div>
                   </div>
+                </div>
+
+                <div className="flex flex-1 items-center justify-center pb-[8px]">
+                  일정이 없습니다.
                 </div>
               </div>
             </div>
