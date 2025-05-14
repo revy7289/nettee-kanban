@@ -1,4 +1,25 @@
+html {
+  font-size: 62.5%;
+}
+
 #root {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-size: 1.4rem;
+  letter-spacing: -5%;
+  line-height: 140%;
+}
+
+ul {
+  scrollbar-width: thin;
+}
+
+li {
+  list-style-type: none;
+}
+
+/* #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
@@ -39,4 +60,4 @@
 
 .read-the-docs {
   color: #888;
-}
+} */
