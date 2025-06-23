@@ -1,4 +1,4 @@
-import { KanbanLayout } from '@/features/kanban/components/kanban-layout';
+import { KanbanLayout } from '@/features/kanban/KanbanLayout';
 
 export function App() {
   return (
