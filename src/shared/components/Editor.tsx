@@ -20,7 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   markdownContent,
   parseMarkdownToBlocks,
-} from '@/parseMarkdownToBlocks';
+} from '@/shared/lib/parseMarkdownToBlocks';
 
 type SuggestionItem = DefaultReactSuggestionItem & {
   key: (typeof SELECTED_SLASH_MENU_ITEMS)[number];

@@ -1,4 +1,4 @@
-import { Editor } from '@/Editor';
+import { Editor } from '@/shared/components/Editor';
 import { Button } from '@/shared/components/ui/button';
 
 interface ModalProps {

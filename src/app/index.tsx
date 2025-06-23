@@ -1,10 +1,8 @@
-import '@/App.css';
-
 import { useState } from 'react';
 
 import viteLogo from '/vite.svg';
 import reactLogo from '@/assets/react.svg';
-import { Modal } from '@/Modal';
+import { Modal } from '@/shared/components/Modal';
 import { Button } from '@/shared/components/ui/button';
 
 export function App() {
