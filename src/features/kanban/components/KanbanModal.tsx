@@ -1,4 +1,11 @@
-import { Dispatch, FormEvent, SetStateAction, useState } from 'react';
+import { PinIcon, XIcon } from 'lucide-react';
+import {
+  ChangeEvent,
+  Dispatch,
+  FormEvent,
+  SetStateAction,
+  useState,
+} from 'react';
 
 import { netteeRepo } from '../constants/kanban';
 import {
@@ -19,8 +26,8 @@ interface ModalProps {
 export function Modal({ item, setModal, setIssues }: ModalProps) {
   const [loading, setLoading] = useState(false);
 
-  console.log(item.repo);
-  console.log(item.project, item.team, item.progress);
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [formToggle, setFormToggle] = useState<Record<string, boolean>>({});
 
   const getRepo = (item: {
     repo?: string;
@@ -109,41 +116,103 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
     }
   };
 
+  const handleFormData = (e: ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+
+    setFormToggle((prev) => ({
+      ...prev,
+      [e.target.name]: false,
+    }));
+  };
+
+  const handleFormToggle = (key: string) => {
+    setFormToggle((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const optionProgress = ['TODO', 'DOING', 'DONE', 'CHECKED'];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex h-screen w-screen items-center justify-center bg-black/50"
+      className="fixed inset-0 flex h-screen w-screen items-center justify-center bg-black/50 pr-[20px] pl-[10px]"
       onClick={(e) => e.target === e.currentTarget && setModal(null)}
     >
       <form
-        className="flex h-[520px] w-[800px] flex-col gap-[20px] rounded-[8px] bg-white p-[20px]"
+        className="flex h-full max-h-[780px] w-full max-w-[1028px] flex-col rounded-[8px] bg-white"
         onSubmit={handleSubmit}
       >
-        <label className="flex w-full flex-col gap-[8px]">
-          <p>제목</p>
-          <input
-            className="h-[40px] w-full rounded-[8px] bg-[#f5f5f5] px-[12px] py-[8px]"
-            type="text"
-            defaultValue={item.title}
-            name="title"
-          />
-        </label>
+        <div className="flex h-[56px] items-center justify-between rounded-t-[8px] bg-[#EDEDED] p-[16px]">
+          <div className="flex items-center gap-[8px]">
+            <div className="flex h-[32px] w-[32px] items-center justify-center">
+              <PinIcon />
+            </div>
 
-        <label className="flex w-full flex-col gap-[8px]">
-          <p>상세 내용</p>
-          <textarea
-            className="h-[200px] w-full resize-none rounded-[8px] bg-[#f5f5f5] px-[12px] py-[8px]"
-            defaultValue={item.body}
-            name="body"
-          ></textarea>
-        </label>
+            <p className="flex gap-[4px] font-semibold">
+              {item.project} <span className="text-[12px]">▶</span> {item.team}
+            </p>
+          </div>
 
-        <button
-          className="h-[36px] w-[224px] rounded-[8px] bg-[#0065FF] text-white duration-200 hover:bg-black disabled:bg-black"
-          type="submit"
-          disabled={loading}
-        >
-          {loading ? '처리 중...' : '테스트'}
-        </button>
+          <div>
+            <XIcon />
+          </div>
+        </div>
+
+        <div className="flex p-[16px]">
+          <div className="relative flex w-full max-w-[420px] flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                진행상태
+              </p>
+
+              <div
+                className="flex h-[32px] w-full max-w-[360px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                onClick={() => handleFormToggle('progress')}
+              >
+                <p>{formData.progress ?? item.progress}</p>
+
+                <span className="text-[12px]">
+                  {formToggle['progress'] ? '▼' : '▲'}
+                </span>
+              </div>
+            </div>
+
+            {formToggle['progress'] && (
+              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                {optionProgress.map((opt) => (
+                  <label
+                    key={opt}
+                    className="flex justify-between px-[12px] py-[6px] hover:bg-gray-50"
+                  >
+                    <p>{opt}</p>
+
+                    <input
+                      type="checkbox"
+                      value={opt}
+                      name="progress"
+                      onChange={handleFormData}
+                      checked={formData.progress === opt}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end p-[16px]">
+          <button
+            className="h-[36px] w-[224px] rounded-[8px] bg-[#0065FF] text-[14px] text-white duration-200 hover:bg-black disabled:bg-black"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? '처리 중...' : '추가하기'}
+          </button>
+        </div>
       </form>
     </div>
   );
