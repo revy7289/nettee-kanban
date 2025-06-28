@@ -1,11 +1,17 @@
-import { PinIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, PinIcon, XIcon } from 'lucide-react';
 import {
   ChangeEvent,
   Dispatch,
   FormEvent,
   SetStateAction,
+  useEffect,
   useState,
 } from 'react';
+import { type DateRange } from 'react-day-picker';
+import { ko } from 'react-day-picker/locale';
+
+import { Editor } from '@/shared/components/Editor';
+import { Calendar } from '@/shared/components/ui/calendar';
 
 import { netteeRepo } from '../constants/kanban';
 import {
@@ -29,6 +35,35 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [formToggle, setFormToggle] = useState<Record<string, boolean>>({});
 
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: item.sta_dt ? new Date(item.sta_dt) : undefined,
+    to: item.end_dt ? new Date(item.end_dt) : undefined,
+  });
+
+  const [markdown, setMarkdown] = useState<string>('');
+
+  useEffect(() => {
+    if (dateRange && dateRange.from !== dateRange.to) {
+      setFormData((prev) => ({
+        ...prev,
+        sta_dt: String(dateRange.from),
+        end_dt: String(dateRange.to),
+      }));
+
+      setFormToggle((prev) => ({
+        ...prev,
+        calendar: false,
+      }));
+    }
+
+    if (markdown) {
+      setFormData((prev) => ({
+        ...prev,
+        body: markdown,
+      }));
+    }
+  }, [dateRange?.to, markdown]);
+
   const getRepo = (item: {
     repo?: string;
     project?: string;
@@ -48,7 +83,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
+    const getForm = new FormData(e.currentTarget);
     const isNew = item.number === 0;
 
     const payload = {
@@ -59,11 +94,13 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
       source: 'client',
       action: isNew ? 'create' : 'update',
       issue: {
-        title: formData.get('title'),
-        body: formData.get('body'),
+        title: getForm.get('title'),
+        body: formData.body ?? item.body,
         assignees: ['revy7289'],
         labels: [],
-        progress: item.progress,
+        progress: formData.progress ?? item.progress,
+        sta_dt: formData.sta_dt ?? item.sta_dt,
+        end_dt: formData.end_dt ?? item.end_dt,
       },
     };
 
@@ -143,9 +180,10 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
       onClick={(e) => e.target === e.currentTarget && setModal(null)}
     >
       <form
-        className="flex h-full max-h-[780px] w-full max-w-[1028px] flex-col rounded-[8px] bg-white"
+        className="flex max-w-[1028px] flex-col rounded-[8px] bg-white"
         onSubmit={handleSubmit}
       >
+        {/* 모달 헤더 영역*/}
         <div className="flex h-[56px] items-center justify-between rounded-t-[8px] bg-[#EDEDED] p-[16px]">
           <div className="flex items-center gap-[8px]">
             <div className="flex h-[32px] w-[32px] items-center justify-center">
@@ -157,12 +195,14 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
             </p>
           </div>
 
-          <div>
+          <div onClick={() => setModal(null)}>
             <XIcon />
           </div>
         </div>
 
-        <div className="flex p-[16px]">
+        {/* 모달 편집 영역 */}
+        <div className="flex flex-wrap gap-[16px] p-[16px]">
+          {/* 진행상태 선택하는 드롭다운 메뉴*/}
           <div className="relative flex w-full max-w-[420px] flex-col">
             <div className="flex items-center gap-[8px]">
               <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
@@ -182,7 +222,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
             </div>
 
             {formToggle['progress'] && (
-              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
                 {optionProgress.map((opt) => (
                   <label
                     key={opt}
@@ -202,8 +242,180 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
               </div>
             )}
           </div>
+
+          {/* 작업기간 선택하는 캘린더 메뉴 */}
+          <div className="relative flex w-full max-w-[560px] flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                작업기간
+              </p>
+
+              <div
+                className="flex w-full cursor-pointer items-center gap-[8px]"
+                onClick={() => handleFormToggle('calendar')}
+              >
+                <div className="flex h-[32px] w-full items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]">
+                  <p>{dateRange?.from?.toLocaleDateString() ?? '날짜 선택'}</p>
+                  <CalendarIcon size={16} />
+                </div>
+                <span>~</span>
+                <div className="flex h-[32px] w-full items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]">
+                  <p>{dateRange?.to?.toLocaleDateString() ?? '날짜 선택'} </p>
+                  <CalendarIcon size={16} />
+                </div>
+              </div>
+            </div>
+
+            {formToggle['calendar'] && (
+              <Calendar
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                className="absolute top-[40px] z-10 h-[356px] w-[284px] self-center rounded-[8px] border shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+                locale={ko}
+              />
+            )}
+          </div>
+
+          {/* 깃허브 템플릿 선택하는 드롭다운 메뉴*/}
+          <div className="relative flex w-full max-w-[420px] flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                템플릿
+              </p>
+
+              <div
+                className="flex h-[32px] w-full max-w-[360px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                onClick={() => handleFormToggle('template')}
+              >
+                <p>!! TODO 아직 안함</p>
+
+                <span className="text-[12px]">
+                  {formToggle['template'] ? '▼' : '▲'}
+                </span>
+              </div>
+            </div>
+
+            {formToggle['template'] && (
+              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                <span>!! TODO 아직 안함</span>
+              </div>
+            )}
+          </div>
+
+          {/* 깃연동 체크하는 드롭다운 메뉴*/}
+          <div className="relative flex w-full max-w-[420px] flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                깃 연동
+              </p>
+
+              <div
+                className="flex h-[32px] w-full max-w-[360px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                onClick={() => handleFormToggle('github')}
+              >
+                <p>!! TODO 아직 안함</p>
+
+                <span className="text-[12px]">
+                  {formToggle['github'] ? '▼' : '▲'}
+                </span>
+              </div>
+            </div>
+
+            {formToggle['github'] && (
+              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                <span>!! TODO 아직 안함</span>
+              </div>
+            )}
+          </div>
+
+          {/* 칸반 이슈 타이틀 */}
+          <div className="w-full">
+            <label className="flex flex-col gap-[4px]">
+              <p className="text-[14px] text-[#939393]">제목</p>
+              <input
+                type="text"
+                className="h-[40px] w-full rounded-[8px] bg-[#F5F5F5] px-[12px] py-[8px]"
+                placeholder="제목을 입력해 주세요."
+                defaultValue={item.title}
+                name="title"
+              />
+            </label>
+          </div>
+
+          {/* 칸반 이슈 내용 에디터 */}
+          <div className="w-full">
+            <label className="flex flex-col gap-[4px]">
+              <p className="text-[14px] text-[#939393]">상세 내용</p>
+              <div className="h-[320px] w-full overflow-auto">
+                <Editor content={item.body} setMarkdown={setMarkdown} />
+              </div>
+            </label>
+          </div>
+
+          {/* 담당자 선택 */}
+          <div className="relative flex w-full flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                담당자
+              </p>
+
+              <div
+                className="flex h-[32px] w-full max-w-[160px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                onClick={() => handleFormToggle('assignee')}
+              >
+                <p>!! TODO 아직 안함</p>
+
+                <span className="text-[12px]">
+                  {formToggle['assignee'] ? '▼' : '▲'}
+                </span>
+              </div>
+
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                담당자
+              </p>
+            </div>
+
+            {formToggle['assignee'] && (
+              <div className="absolute bottom-[40px] z-10 flex w-full max-w-[160px] flex-col rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                <span>!! TODO 아직 안함</span>
+              </div>
+            )}
+          </div>
+
+          {/* 라벨 추가 */}
+          <div className="relative flex w-full flex-col">
+            <div className="flex items-center gap-[8px]">
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                라벨 추가
+              </p>
+
+              <div
+                className="flex h-[32px] w-full max-w-[160px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                onClick={() => handleFormToggle('label')}
+              >
+                <p>!! TODO 아직 안함</p>
+
+                <span className="text-[12px]">
+                  {formToggle['label'] ? '▼' : '▲'}
+                </span>
+              </div>
+
+              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
+                라벨
+              </p>
+            </div>
+
+            {formToggle['label'] && (
+              <div className="absolute bottom-[40px] z-10 flex w-full max-w-[160px] flex-col rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                <span>!! TODO 아직 안함</span>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* 서브밋 버튼 */}
         <div className="flex justify-end p-[16px]">
           <button
             className="h-[36px] w-[224px] rounded-[8px] bg-[#0065FF] text-[14px] text-white duration-200 hover:bg-black disabled:bg-black"
