@@ -1,4 +1,4 @@
-import { CalendarIcon, PinIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, GithubIcon, XIcon } from 'lucide-react';
 import {
   ChangeEvent,
   Dispatch,
@@ -10,8 +10,10 @@ import {
 import { type DateRange } from 'react-day-picker';
 import { ko } from 'react-day-picker/locale';
 
+import PinX from '@/assets/pinDisable.svg';
 import { Editor } from '@/shared/components/Editor';
 import { Calendar } from '@/shared/components/ui/calendar';
+import { octokit } from '@/shared/lib/git-octokit';
 
 import { netteeRepo } from '../constants/kanban';
 import {
@@ -174,6 +176,60 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
 
   const optionProgress = ['TODO', 'DOING', 'DONE', 'CHECKED'];
 
+  const getTemplateContents = async () => {
+    const res = await octokit.rest.repos.getContent({
+      owner: 'nettee-space',
+      repo: item.repo ?? 'test-repo',
+      path: '.github/ISSUE_TEMPLATE',
+    });
+
+    if (!Array.isArray(res.data)) return [];
+
+    const markdownFiles = res.data.filter((f) => f.name.endsWith('.md'));
+
+    const contents = await Promise.all(
+      markdownFiles.map(async (file) => {
+        const res = await fetch(file.download_url);
+        const content = await res.text();
+        return {
+          name: file.name,
+          content,
+        };
+      })
+    );
+
+    console.log(contents);
+    return contents;
+  };
+
+  const getRepoList = async () => {
+    const repos = await octokit.rest.repos.listForOrg({
+      org: 'nettee-space',
+    });
+
+    console.log(repos);
+    return repos;
+  };
+
+  const getOrgMemberList = async () => {
+    const members = await octokit.rest.orgs.listMembers({
+      org: 'nettee-space',
+    });
+
+    console.log(members);
+    return members;
+  };
+
+  const getRepoLabelList = async () => {
+    const labels = await octokit.rest.issues.listLabelsForRepo({
+      owner: 'nettee-space',
+      repo: item.repo,
+    });
+
+    console.log(labels);
+    return labels;
+  };
+
   return (
     <div
       className="fixed inset-0 flex h-screen w-screen items-center justify-center bg-black/50 pr-[20px] pl-[10px]"
@@ -187,7 +243,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
         <div className="flex h-[56px] items-center justify-between rounded-t-[8px] bg-[#EDEDED] p-[16px]">
           <div className="flex items-center gap-[8px]">
             <div className="flex h-[32px] w-[32px] items-center justify-center">
-              <PinIcon />
+              <img src={PinX} />
             </div>
 
             <p className="flex gap-[4px] font-semibold">
@@ -216,7 +272,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
                 <p>{formData.progress ?? item.progress}</p>
 
                 <span className="text-[12px]">
-                  {formToggle['progress'] ? '▼' : '▲'}
+                  {formToggle['progress'] ? '▲' : '▼'}
                 </span>
               </div>
             </div>
@@ -289,43 +345,45 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
                 className="flex h-[32px] w-full max-w-[360px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
                 onClick={() => handleFormToggle('template')}
               >
-                <p>!! TODO 아직 안함</p>
+                <p>선택</p>
 
                 <span className="text-[12px]">
-                  {formToggle['template'] ? '▼' : '▲'}
+                  {formToggle['template'] ? '▲' : '▼'}
                 </span>
               </div>
             </div>
 
             {formToggle['template'] && (
               <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-                <span>!! TODO 아직 안함</span>
+                <span onClick={getTemplateContents}>!! TODO 아직 안함</span>
               </div>
             )}
           </div>
 
           {/* 깃연동 체크하는 드롭다운 메뉴*/}
-          <div className="relative flex w-full max-w-[420px] flex-col">
+          <div className="relative flex w-full max-w-[560px] flex-col">
             <div className="flex items-center gap-[8px]">
-              <p className="w-full max-w-[52px] text-[14px] text-[#646464]">
-                깃 연동
-              </p>
+              <label className="flex h-[32px] w-full max-w-[140px] items-center justify-center gap-[4px] rounded-[8px] bg-[#F0F6FF] p-[8px] text-[#0065FF]">
+                <input type="checkbox" className="h-[16px] w-[16px]" />
+                <GithubIcon size={16} />
+                <p>GitHub 연동</p>
+              </label>
 
               <div
-                className="flex h-[32px] w-full max-w-[360px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
+                className="flex h-[32px] w-full max-w-[412px] cursor-pointer items-center justify-between rounded-[4px] border-2 border-[#DBDBDB] px-[12px] py-[6px]"
                 onClick={() => handleFormToggle('github')}
               >
                 <p>!! TODO 아직 안함</p>
 
                 <span className="text-[12px]">
-                  {formToggle['github'] ? '▼' : '▲'}
+                  {formToggle['github'] ? '▲' : '▼'}
                 </span>
               </div>
             </div>
 
             {formToggle['github'] && (
-              <div className="absolute top-[40px] z-10 flex w-full max-w-[360px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-                <span>!! TODO 아직 안함</span>
+              <div className="absolute top-[40px] z-10 flex w-full max-w-[412px] flex-col self-end rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+                <span onClick={getRepoList}>!! TODO 아직 안함</span>
               </div>
             )}
           </div>
@@ -368,7 +426,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
                 <p>!! TODO 아직 안함</p>
 
                 <span className="text-[12px]">
-                  {formToggle['assignee'] ? '▼' : '▲'}
+                  {formToggle['assignee'] ? '▲' : '▼'}
                 </span>
               </div>
 
@@ -379,7 +437,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
 
             {formToggle['assignee'] && (
               <div className="absolute bottom-[40px] z-10 flex w-full max-w-[160px] flex-col rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-                <span>!! TODO 아직 안함</span>
+                <span onClick={getOrgMemberList}>!! TODO 아직 안함</span>
               </div>
             )}
           </div>
@@ -398,7 +456,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
                 <p>!! TODO 아직 안함</p>
 
                 <span className="text-[12px]">
-                  {formToggle['label'] ? '▼' : '▲'}
+                  {formToggle['label'] ? '▲' : '▼'}
                 </span>
               </div>
 
@@ -409,7 +467,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
 
             {formToggle['label'] && (
               <div className="absolute bottom-[40px] z-10 flex w-full max-w-[160px] flex-col rounded-[4px] border bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-                <span>!! TODO 아직 안함</span>
+                <span onClick={getRepoLabelList}>!! TODO 아직 안함</span>
               </div>
             )}
           </div>
