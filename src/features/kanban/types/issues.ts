@@ -19,6 +19,9 @@ export type IssueData = {
   project: string;
   team: string;
   repo: string;
+
+  // pin처리 할 때만 사용 됨
+  pinned?: boolean;
 };
 
 export type KanbanProgress = 'TODO' | 'DOING' | 'DONE';

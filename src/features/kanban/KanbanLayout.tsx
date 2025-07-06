@@ -1,7 +1,10 @@
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CircleCheckIcon, PlusIcon } from 'lucide-react';
-import { DragEvent, Fragment, useEffect, useState } from 'react';
+import { DragEvent, Fragment, MouseEvent, useEffect, useState } from 'react';
 
+import Github from '@/assets/github.svg';
+import pinActive from '@/assets/pinActive.svg';
+import pinDisable from '@/assets/pinDisable.svg';
 import { supabase } from '@/shared/lib/supa-client';
 
 import { DropIndicator } from './components/DropIndicator';
@@ -55,6 +58,7 @@ export function KanbanLayout() {
 
   // 전체 데이터와 상세 모달 조회용
   const [groupedIssues, setGroupedIssues] = useState<GroupedIssues>({});
+  const [pinnedIssues, setPinnedIssues] = useState<GroupedIssues>({});
   const [modalItem, setModalItem] = useState<Partial<IssueData> | null>(null);
 
   // 팀과 멤버 리스팅
@@ -385,6 +389,102 @@ export function KanbanLayout() {
     return el;
   };
 
+  const pinThisIssue = (
+    e: MouseEvent<HTMLImageElement>,
+    project: string,
+    team: string,
+    progress: string,
+    cardId: number
+  ) => {
+    e.stopPropagation();
+
+    setGroupedIssues((prev) => {
+      const updated = { ...prev };
+      const column = updated[project][team][progress as KanbanProgress];
+
+      const index = column.findIndex((c) => c.id === cardId);
+      if (index === -1) return prev;
+
+      const issue = column[index];
+      column.splice(index, 1); // 기존에서 제거
+
+      setPinnedIssues((prev) => {
+        const existing =
+          prev[project]?.[team]?.[progress as KanbanProgress] ?? [];
+
+        const updatedTeam = {
+          ...(prev[project]?.[team] ?? {}),
+          [progress]: [{ ...issue, pinned: true }, ...existing],
+        };
+
+        return {
+          ...prev,
+          [project]: {
+            ...(prev[project] ?? {}),
+            [team]: updatedTeam,
+          },
+        };
+      });
+
+      return updated;
+    });
+  };
+
+  const getPinnedList = (
+    pinned: GroupedIssues,
+    project: string,
+    team: string,
+    progress: string
+  ) => {
+    return pinned?.[project]?.[team]?.[progress as KanbanProgress] ?? [];
+  };
+
+  const unpinThisIssue = (
+    e: MouseEvent<HTMLImageElement>,
+    project: string,
+    team: string,
+    progress: string,
+    cardId: number
+  ) => {
+    e.stopPropagation();
+
+    setPinnedIssues((prev) => {
+      const targetList =
+        prev[project]?.[team]?.[progress as KanbanProgress] ?? [];
+
+      const found = targetList.find((c) => c.id === cardId);
+      if (!found) return prev;
+
+      const newList = targetList.filter((c) => c.id !== cardId);
+      const { pinned, ...restoredIssue } = found;
+
+      setGroupedIssues((prev) => {
+        const updated = { ...prev };
+        const list = updated[project][team][progress as KanbanProgress];
+
+        const filtered = list.filter((c) => c.id !== cardId);
+
+        updated[project][team][progress as KanbanProgress] = [
+          restoredIssue,
+          ...filtered,
+        ];
+
+        return updated;
+      });
+
+      return {
+        ...prev,
+        [project]: {
+          ...prev[project],
+          [team]: {
+            ...prev[project][team],
+            [progress]: newList,
+          },
+        },
+      };
+    });
+  };
+
   return (
     <main className="flex h-full w-full">
       {/* (aside) 사이드 바 섹션 */}
@@ -625,13 +725,20 @@ export function KanbanLayout() {
                     {Object.entries(progressMap).map(([progress, issues]) => (
                       <div
                         key={`${project}-${team}-${progress}`}
-                        className={`flex max-h-[860px] min-h-[152px] flex-1 flex-col gap-[12px] overflow-scroll ${getKanbanStyle(progress).bg} p-[12px] pb-[32px]`}
+                        className={`flex max-h-[860px] flex-1 flex-col gap-[12px] overflow-auto ${getKanbanStyle(progress).bg} p-[12px] pb-[32px]`}
                       >
                         <div className="flex items-center justify-between px-[8px]">
                           <div className="flex gap-[8px]">
                             <p>{progress}</p>
+
                             <p className={getKanbanStyle(progress).text}>
-                              {issues.length}
+                              {issues.length +
+                                getPinnedList(
+                                  pinnedIssues,
+                                  project,
+                                  team,
+                                  progress
+                                ).length}
                             </p>
                           </div>
 
@@ -657,24 +764,20 @@ export function KanbanLayout() {
                           </div>
                         </div>
 
-                        <ul
-                          id={progress}
-                          className="flex flex-1 flex-col"
-                          onDrop={(e) =>
-                            handleDragEnd(e, project, team, progress)
-                          }
-                          onDragOver={(e) => handleDragOver(e, progress)}
-                          onDragLeave={() => handleDragLeave(progress)}
-                        >
-                          {issues.map((item) => (
-                            <>
+                        <div>
+                          {getPinnedList(
+                            pinnedIssues,
+                            project,
+                            team,
+                            progress
+                          ).map((item) => (
+                            <Fragment key={item.id}>
                               <DropIndicator
                                 beforeId={item.id}
                                 progress={item.progress}
                               />
                               <li
-                                key={item.id}
-                                className="flex min-h-[100px] w-full flex-col gap-[12px] rounded-[8px] bg-white"
+                                className="flex min-h-[100px] w-full flex-col rounded-[8px] bg-white"
                                 onClick={() => setModalItem(item)}
                               >
                                 <div
@@ -690,17 +793,116 @@ export function KanbanLayout() {
                                       color="#fff"
                                       className="mt-[2px] h-[24px] w-[24px] flex-none"
                                     />
-                                    <p className="w-[260px] truncate text-[14px] font-semibold tracking-tight">
+                                    <p className="w-[200px] truncate text-[14px] font-semibold tracking-tight">
                                       {item.title}
                                     </p>
                                   </div>
 
-                                  <p className="px-[4px] text-[12px] text-[#646464]">
-                                    {item.html_url}
-                                  </p>
+                                  <div className="flex justify-between">
+                                    <p className="px-[4px] text-[12px] text-[#646464]">
+                                      {item.html_url}
+                                    </p>
+
+                                    <div className="flex flex-none items-end gap-[10px]">
+                                      {item.repo && (
+                                        <img
+                                          src={Github}
+                                          className="h-[24px] w-[24px]"
+                                        />
+                                      )}
+
+                                      <img
+                                        src={pinActive}
+                                        className="h-[24px] w-[24px]"
+                                        onClick={(e) =>
+                                          unpinThisIssue(
+                                            e,
+                                            project,
+                                            team,
+                                            progress,
+                                            item.id
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
                               </li>
-                            </>
+                            </Fragment>
+                          ))}
+                        </div>
+
+                        <div
+                          className={`${getKanbanStyle(progress).line} h-[1px] w-full shrink-0`}
+                        ></div>
+
+                        <ul
+                          className="flex flex-1 flex-col"
+                          onDrop={(e) =>
+                            handleDragEnd(e, project, team, progress)
+                          }
+                          onDragOver={(e) => handleDragOver(e, progress)}
+                          onDragLeave={() => handleDragLeave(progress)}
+                        >
+                          {issues.map((item) => (
+                            <Fragment key={item.id}>
+                              <DropIndicator
+                                beforeId={item.id}
+                                progress={item.progress}
+                              />
+                              <li
+                                className="flex min-h-[100px] w-full flex-col rounded-[8px] bg-white"
+                                onClick={() => setModalItem(item)}
+                              >
+                                <div
+                                  draggable="true"
+                                  onDragStart={(e) => {
+                                    handleDragStart(e, item);
+                                  }}
+                                  className="cursor-grab px-[14px] py-[16px] active:cursor-grabbing active:bg-[#f5f5f5]"
+                                >
+                                  <div className="flex items-center gap-[4px]">
+                                    <CircleCheckIcon
+                                      fill="#C3C3C3"
+                                      color="#fff"
+                                      className="mt-[2px] h-[24px] w-[24px] flex-none"
+                                    />
+                                    <p className="w-[200px] truncate text-[14px] font-semibold tracking-tight">
+                                      {item.title}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex justify-between">
+                                    <p className="px-[4px] text-[12px] text-[#646464]">
+                                      {item.html_url}
+                                    </p>
+
+                                    <div className="flex flex-none items-end gap-[10px]">
+                                      {item.repo && (
+                                        <img
+                                          src={Github}
+                                          className="h-[24px] w-[24px]"
+                                        />
+                                      )}
+
+                                      <img
+                                        src={pinDisable}
+                                        className="h-[24px] w-[24px]"
+                                        onClick={(e) =>
+                                          pinThisIssue(
+                                            e,
+                                            project,
+                                            team,
+                                            progress,
+                                            item.id
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                            </Fragment>
                           ))}
                           <DropIndicator beforeId={null} progress={progress} />
                         </ul>

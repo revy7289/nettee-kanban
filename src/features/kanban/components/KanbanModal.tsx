@@ -10,8 +10,8 @@ import {
 import { type DateRange } from 'react-day-picker';
 import { ko } from 'react-day-picker/locale';
 
+import Github from '@/assets/github.svg';
 import PinX from '@/assets/pinDisable.svg';
-import React from '@/assets/react.svg';
 import { Editor } from '@/shared/components/Editor';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { octokit } from '@/shared/lib/git-octokit';
@@ -366,7 +366,7 @@ export function KanbanModal({ item, setModal, setIssues }: ModalProps) {
             <div className="flex items-center gap-[8px]">
               <label className="flex h-[32px] w-full max-w-[140px] items-center justify-center gap-[4px] rounded-[8px] bg-[#F0F6FF] p-[8px] text-[#0065FF]">
                 <input type="checkbox" className="h-[16px] w-[16px]" />
-                <img src={React} />
+                <img src={Github} />
                 <p>GitHub 연동</p>
               </label>
 
