@@ -192,14 +192,20 @@ export function KanbanLayout() {
     for (const [projectName, teamObj] of Object.entries(netteeRepo)) {
       for (const [teamName, tableList] of Object.entries(teamObj)) {
         for (const tableName of tableList) {
-          const promise = fetchTableData(tableName).then((rows) =>
-            rows.map((row) => ({
+          const promise = fetchTableData(tableName).then((rows) => {
+            const tagged = rows.map((row) => ({
               ...row,
               project: projectName,
               team: teamName,
-              repo: tableName,
-            }))
-          );
+              repo: ['blolet', 'kanban', 'onboard'].some((prefix) =>
+                tableName.startsWith(prefix)
+              )
+                ? ''
+                : tableName,
+            }));
+
+            return tagged;
+          });
 
           promiseBuffer.push(promise);
         }
@@ -213,19 +219,22 @@ export function KanbanLayout() {
   const formatIssueByProgress = (data: IssueData[]): GroupedIssues => {
     const result: GroupedIssues = {};
 
-    for (const issue of data) {
-      const projectName = issue.project;
-      const teamName = issue.team;
-      const progress = (issue.progress ?? 'TODO') as KanbanProgress;
+    for (const [projectName, teamObj] of Object.entries(netteeRepo)) {
+      result[projectName] = {};
 
-      if (!result[projectName]) result[projectName] = {};
-      if (!result[projectName][teamName]) {
+      for (const [teamName] of Object.entries(teamObj)) {
         result[projectName][teamName] = {
           TODO: [],
           DOING: [],
           DONE: [],
         };
       }
+    }
+
+    for (const issue of data) {
+      const projectName = issue.project;
+      const teamName = issue.team;
+      const progress = (issue.progress ?? 'TODO') as KanbanProgress;
 
       result[projectName][teamName][progress].push(issue);
     }
@@ -389,6 +398,9 @@ export function KanbanLayout() {
     return el;
   };
 
+  // ********
+  // PIN 기능
+  // ********
   const pinThisIssue = (
     e: MouseEvent<HTMLImageElement>,
     project: string,
@@ -412,7 +424,7 @@ export function KanbanLayout() {
         const existing =
           prev[project]?.[team]?.[progress as KanbanProgress] ?? [];
 
-        const updatedTeam = {
+        const updated = {
           ...(prev[project]?.[team] ?? {}),
           [progress]: [{ ...issue, pinned: true }, ...existing],
         };
@@ -421,7 +433,7 @@ export function KanbanLayout() {
           ...prev,
           [project]: {
             ...(prev[project] ?? {}),
-            [team]: updatedTeam,
+            [team]: updated,
           },
         };
       });
