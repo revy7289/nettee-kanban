@@ -190,7 +190,7 @@ export function KanbanModal({ item, setModal, setIssues }: ModalProps) {
 
     const contents = await Promise.all(
       markdownFiles.map(async (file) => {
-        const res = await fetch(file.download_url);
+        const res = await fetch(file.download_url as string);
         const content = await res.text();
         return {
           name: file.name,
@@ -224,7 +224,7 @@ export function KanbanModal({ item, setModal, setIssues }: ModalProps) {
   const getRepoLabelList = async () => {
     const labels = await octokit.rest.issues.listLabelsForRepo({
       owner: 'nettee-space',
-      repo: item.repo,
+      repo: item.repo ?? '',
     });
 
     console.log(labels);
