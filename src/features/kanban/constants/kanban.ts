@@ -9,25 +9,32 @@ export enum E_Team {
 
 export const netteeRepo = {
   Blolet: {
-    [E_Team.lead]: [],
-    [E_Team.pl]: [],
-    [E_Team.ux]: [],
-    [E_Team.fe]: [],
-    [E_Team.be]: [],
+    [E_Team.lead]: ['blolet-lead'],
+    [E_Team.pl]: ['blolet-pl'],
+    [E_Team.ux]: ['blolet-ux'],
+    [E_Team.fe]: [''],
+    [E_Team.be]: ['nettee-blolet-backend'],
   },
   Kanban: {
-    [E_Team.lead]: [],
-    [E_Team.pl]: [],
-    [E_Team.ux]: [],
+    [E_Team.lead]: ['kanban-lead'],
+    [E_Team.pl]: ['kanban-pl'],
+    [E_Team.ux]: ['kanban-ux'],
     [E_Team.fe]: ['test-repo', 'nettee-kanban'],
-    [E_Team.be]: ['backend-sample-multi-module'],
+    [E_Team.be]: [''],
   },
-  Demo: {
-    [E_Team.lead]: [],
-    [E_Team.pl]: [],
-    [E_Team.ux]: [],
-    [E_Team.fe]: ['frontend-sample-monorepo-simple-crud'],
-    [E_Team.be]: ['backend-sample-hexagonal-simple-crud'],
+  onBoard: {
+    [E_Team.lead]: ['onboard-lead'],
+    [E_Team.pl]: ['onboard-pl'],
+    [E_Team.ux]: ['onboard-ux'],
+    [E_Team.fe]: [
+      'frontend-sample-code-registry',
+      'frontend-sample-monorepo-simple-crud',
+    ],
+    [E_Team.be]: [
+      'backend-sample-layered-simple-crud',
+      'backend-sample-hexagonal-simple-crud',
+      'backend-sample-multi-module',
+    ],
   },
 } as const;
 

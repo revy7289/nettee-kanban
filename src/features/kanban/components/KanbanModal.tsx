@@ -1,4 +1,4 @@
-import { CalendarIcon, GithubIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, XIcon } from 'lucide-react';
 import {
   ChangeEvent,
   Dispatch,
@@ -11,6 +11,7 @@ import { type DateRange } from 'react-day-picker';
 import { ko } from 'react-day-picker/locale';
 
 import PinX from '@/assets/pinDisable.svg';
+import React from '@/assets/react.svg';
 import { Editor } from '@/shared/components/Editor';
 import { Calendar } from '@/shared/components/ui/calendar';
 import { octokit } from '@/shared/lib/git-octokit';
@@ -31,7 +32,7 @@ interface ModalProps {
   setIssues: SetState<GroupedIssues>;
 }
 
-export function Modal({ item, setModal, setIssues }: ModalProps) {
+export function KanbanModal({ item, setModal, setIssues }: ModalProps) {
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -365,7 +366,7 @@ export function Modal({ item, setModal, setIssues }: ModalProps) {
             <div className="flex items-center gap-[8px]">
               <label className="flex h-[32px] w-full max-w-[140px] items-center justify-center gap-[4px] rounded-[8px] bg-[#F0F6FF] p-[8px] text-[#0065FF]">
                 <input type="checkbox" className="h-[16px] w-[16px]" />
-                <GithubIcon size={16} />
+                <img src={React} />
                 <p>GitHub 연동</p>
               </label>
 

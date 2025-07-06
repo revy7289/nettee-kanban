@@ -130,6 +130,14 @@ html {
   font-size: 62.5%;
   font-family: 'PretendardVariable', sans-serif;
   scrollbar-width: thin;
+
+  div {
+    scrollbar-width: thin;
+  }
+
+  li {
+    list-style-type: none;
+  }
 }
 
 #root {
@@ -152,8 +160,4 @@ body {
 code {
   font-family:
     source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-li {
-  list-style-type: none;
 }

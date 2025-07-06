@@ -1,10 +1,11 @@
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { CircleCheckIcon, PlusIcon } from 'lucide-react';
-import { Fragment, useEffect, useState } from 'react';
+import { DragEvent, Fragment, useEffect, useState } from 'react';
 
 import { supabase } from '@/shared/lib/supa-client';
 
-import { Modal } from './components/KanbanModal';
+import { DropIndicator } from './components/DropIndicator';
+import { KanbanModal } from './components/KanbanModal';
 import {
   E_Team,
   kanbanStyleMap,
@@ -15,7 +16,7 @@ import { GroupedIssues, IssueData, KanbanProgress } from './types/issues';
 
 // 사이드바와 프로젝트 리스팅
 const sidebarList = ['project', 'team', 'assignee', 'label', 'more'];
-const projectList = ['전체', 'Blolet', 'Kanban', 'Demo'];
+const projectList = ['전체', 'Blolet', 'Kanban', 'onBoard'];
 const dummyLabels = [
   '보류',
   '낮음',
@@ -65,7 +66,9 @@ export function KanbanLayout() {
         (team) => netteeMembers[team as keyof typeof netteeMembers]
       );
 
+  // ************************************************************
   // 슈퍼베이스 실시간 통신용 채널 오픈 + 페이로드 가공하여 신규상태로 갱신
+  // ************************************************************
   const openChannel = () => {
     const channel = supabase
       .channel('realtime-kanban')
@@ -102,11 +105,21 @@ export function KanbanLayout() {
             return prev; // fallback
           });
         }
-      )
-      .subscribe();
+      );
+
+    const trySubscribe = () => {
+      try {
+        channel.subscribe();
+      } catch (error) {
+        console.error('realtime connection failed');
+        alert('슈퍼베이스 리얼타임 미작동 중!!');
+      }
+    };
+
+    trySubscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      channel.unsubscribe();
     };
   };
 
@@ -115,6 +128,9 @@ export function KanbanLayout() {
     return cleanup;
   }, []);
 
+  // ******************************************************
+  // 사이드바 토글 상태와, 페이지 전체 아코디언 상태를 동적으로 관리
+  // ******************************************************
   const handleProjectToggle = (proj: string) => {
     if (proj === '전체') return setSelectedProject(['전체']);
 
@@ -148,7 +164,12 @@ export function KanbanLayout() {
     }));
   };
 
+  // *****************************************************************
+  // constants에 등록된 이름으로 supabase를 전부 순회하여 테이블 가져오는 함수
+  // *****************************************************************
   const fetchTableData = async (table: string): Promise<IssueData[]> => {
+    if (table === '') return [];
+
     const { data, error } = await supabase
       .from(table)
       .select('*')
@@ -208,16 +229,19 @@ export function KanbanLayout() {
     return result;
   };
 
+  // ********************************************************
   // 최초 로드할 때 모든 테이블 순회, 칸반 형태로 가공하여 state 등록
+  // ********************************************************
   useEffect(() => {
-    const load = async () => {
+    const loadSupabase = async () => {
       const getIssues = await promiseAllIssue();
       const grouped = formatIssueByProgress(getIssues);
       setGroupedIssues(grouped);
     };
-    load();
+
+    loadSupabase();
   }, []);
-  console.log(groupedIssues);
+  // console.log(groupedIssues);
 
   // groupedIssues가 빈 객체가 아닌지 확인, 빈 상태면 로딩 서스펜스
   if (Object.keys(groupedIssues).length === 0) {
@@ -229,6 +253,136 @@ export function KanbanLayout() {
       kanbanStyleMap[progress as keyof typeof kanbanStyleMap] ||
       kanbanStyleMap.DEFAULT
     );
+  };
+
+  // ************
+  // DND 유틸 함수
+  // ************
+  const handleDragStart = (e: DragEvent, item: IssueData) => {
+    e.dataTransfer.setData('cardId', String(item.id));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = (
+    e: DragEvent,
+    project: string,
+    team: string,
+    progress: string
+  ) => {
+    const cardId = e.dataTransfer.getData('cardId');
+    clearHighlights(progress);
+
+    const indicators = getIndicators(progress);
+    const { element } = getNearestIndicator(e, indicators);
+
+    const before = element.dataset.before;
+
+    if (before !== cardId) {
+      setGroupedIssues((prev) => {
+        const updated = { ...prev };
+
+        // 1. 전체 구조에서 cardToTransfer 탐색 및 제거
+        let cardToTransfer: IssueData | undefined;
+
+        const status: KanbanProgress[] = ['TODO', 'DOING', 'DONE'];
+        for (const p of Object.keys(prev)) {
+          for (const t of Object.keys(prev[p])) {
+            for (const key of status) {
+              const list = updated[p][t][key];
+              const idx = list.findIndex((c) => String(c.id) === cardId);
+              if (idx > -1) {
+                // 카드 복사 및 제거
+                cardToTransfer = { ...list[idx], progress };
+                list.splice(idx, 1);
+              }
+            }
+          }
+        }
+
+        if (!cardToTransfer) return prev; // fallback
+
+        // 2. 타겟 column 배열 준비
+        const copy = [...updated[project][team][progress as KanbanProgress]];
+
+        const moveToBack = before === '-1';
+
+        if (moveToBack) {
+          copy.push(cardToTransfer);
+        } else {
+          const insertAtIndex = copy.findIndex(
+            (el) => String(el.id) === before
+          );
+          if (insertAtIndex === -1) {
+            console.warn('Insert target not found, skipping');
+            return prev;
+          }
+          copy.splice(insertAtIndex, 0, cardToTransfer);
+        }
+
+        // 3. 타겟 column 갱신
+        updated[project][team][progress as KanbanProgress] = copy;
+
+        return updated;
+      });
+    }
+  };
+
+  const handleDragOver = (e: DragEvent, progress: string) => {
+    e.preventDefault();
+    highlightIndicator(e, progress);
+  };
+
+  const handleDragLeave = (progress: string) => {
+    clearHighlights(progress);
+  };
+
+  // ************
+  // DND 인디케이터 함수
+  // ************
+  const getIndicators = (progress: string) => {
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(`[data-column="${progress}"]`)
+    );
+  };
+
+  const highlightIndicator = (e: DragEvent, progress: string) => {
+    const indicators = getIndicators(progress);
+    clearHighlights(progress, indicators);
+
+    const el = getNearestIndicator(e, indicators);
+    el.element.style.opacity = '1';
+  };
+
+  const clearHighlights = (progress: string, els?: HTMLElement[]) => {
+    const indicators = els || getIndicators(progress);
+
+    indicators.forEach((i) => {
+      i.style.opacity = '0';
+    });
+  };
+
+  const getNearestIndicator = (e: DragEvent, indicators: HTMLElement[]) => {
+    const DISTANCE_OFFSET = 100;
+
+    const el = indicators.reduce(
+      (closest, child) => {
+        const box = child.getBoundingClientRect();
+
+        const offset = e.pageY - (box.top + DISTANCE_OFFSET);
+
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      },
+      {
+        offset: Number.NEGATIVE_INFINITY,
+        element: indicators[indicators.length - 1],
+      }
+    );
+
+    return el;
   };
 
   return (
@@ -471,7 +625,7 @@ export function KanbanLayout() {
                     {Object.entries(progressMap).map(([progress, issues]) => (
                       <div
                         key={`${project}-${team}-${progress}`}
-                        className={`flex max-h-[860px] min-h-[152px] flex-1 flex-col gap-[12px] overflow-auto ${getKanbanStyle(progress).bg} p-[12px] pb-[32px]`}
+                        className={`flex max-h-[860px] min-h-[152px] flex-1 flex-col gap-[12px] overflow-scroll ${getKanbanStyle(progress).bg} p-[12px] pb-[32px]`}
                       >
                         <div className="flex items-center justify-between px-[8px]">
                           <div className="flex gap-[8px]">
@@ -503,29 +657,52 @@ export function KanbanLayout() {
                           </div>
                         </div>
 
-                        <ul className="flex flex-1 flex-col gap-[16px]">
+                        <ul
+                          id={progress}
+                          className="flex flex-1 flex-col"
+                          onDrop={(e) =>
+                            handleDragEnd(e, project, team, progress)
+                          }
+                          onDragOver={(e) => handleDragOver(e, progress)}
+                          onDragLeave={() => handleDragLeave(progress)}
+                        >
                           {issues.map((item) => (
-                            <li
-                              key={item.id}
-                              className="flex min-h-[100px] w-full flex-col gap-[12px] rounded-[8px] bg-white px-[14px] py-[16px]"
-                              onClick={() => setModalItem(item)}
-                            >
-                              <div className="flex items-center gap-[4px]">
-                                <CircleCheckIcon
-                                  fill="#C3C3C3"
-                                  color="#fff"
-                                  className="mt-[2px] h-[24px] w-[24px] flex-none"
-                                />
-                                <p className="w-[260px] truncate text-[14px] font-semibold tracking-tight">
-                                  {item.title}
-                                </p>
-                              </div>
+                            <>
+                              <DropIndicator
+                                beforeId={item.id}
+                                progress={item.progress}
+                              />
+                              <li
+                                key={item.id}
+                                className="flex min-h-[100px] w-full flex-col gap-[12px] rounded-[8px] bg-white"
+                                onClick={() => setModalItem(item)}
+                              >
+                                <div
+                                  draggable="true"
+                                  onDragStart={(e) => {
+                                    handleDragStart(e, item);
+                                  }}
+                                  className="cursor-grab px-[14px] py-[16px] active:cursor-grabbing active:bg-[#f5f5f5]"
+                                >
+                                  <div className="flex items-center gap-[4px]">
+                                    <CircleCheckIcon
+                                      fill="#C3C3C3"
+                                      color="#fff"
+                                      className="mt-[2px] h-[24px] w-[24px] flex-none"
+                                    />
+                                    <p className="w-[260px] truncate text-[14px] font-semibold tracking-tight">
+                                      {item.title}
+                                    </p>
+                                  </div>
 
-                              <p className="px-[4px] text-[12px] text-[#646464]">
-                                {item.html_url}
-                              </p>
-                            </li>
+                                  <p className="px-[4px] text-[12px] text-[#646464]">
+                                    {item.html_url}
+                                  </p>
+                                </div>
+                              </li>
+                            </>
                           ))}
+                          <DropIndicator beforeId={null} progress={progress} />
                         </ul>
                       </div>
                     ))}
@@ -535,7 +712,7 @@ export function KanbanLayout() {
             </div>
 
             {modalItem && (
-              <Modal
+              <KanbanModal
                 item={modalItem}
                 setModal={setModalItem}
                 setIssues={setGroupedIssues}
